@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #007BFF;
+  --color-brand-secondary: #FFDC00;
+  --color-brand-accent: #FF4136;
+  --color-brand-dark: var(--bg-dark);
+  --color-brand-surface: var(--bg-surface);
+  --color-brand-muted: var(--bg-muted);
+
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+
+  --animate-ripple: ripple 0.6s linear;
+  --animate-slide-up: slideUp 0.3s cubic-bezier(0, 0, 0.2, 1);
+
+  @keyframes slideUp {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(0); }
+  }
+}
+
+:root {
+  --brand-blue: #007BFF;
+  --brand-yellow: #FFDC00;
+  --brand-red: #FF4136;
+  --bg-color: #F8F9FA;
+  --bg-surface: #FFFFFF;
+  --bg-muted: #F8F9FA;
+  --bg-dark: #0A0A0A;
+  --text-color: #1A1A1A;
+}
+
+.dark {
+  --bg-color: #0A0A0A;
+  --bg-surface: #121212;
+  --bg-muted: #1A1A1A;
+  --bg-dark: #000000;
+  --text-color: #F8F9FA;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  outline: none !important;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  overscroll-behavior-y: contain;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Optimizaciones de Touch */
+button, a, input, select {
+  min-height: 48px;
+}
+
+/* Estados de scroll nativos en iOS */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Skeleton animado más fluido */
+.skeleton {
+  background: linear-gradient(90deg, #F0F2F5 25%, #E1E4E8 50%, #F0F2F5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+.safe-pt { padding-top: env(safe-area-inset-top); }

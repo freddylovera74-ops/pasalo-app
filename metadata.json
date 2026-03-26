@@ -1,0 +1,9 @@
+{
+  "name": "PASALO.app",
+  "description": "Plataforma P2P hiperlocal para compra/venta de artículos de segunda mano optimizada para el mercado venezolano.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

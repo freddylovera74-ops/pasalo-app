@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Public and private user information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "reputation": { "type": "number" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "reputation", "role"]
+    },
+    "listings": {
+      "title": "Marketplace Listing",
+      "description": "Items for sale or exchange",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priceUsd": { "type": "number" },
+        "priceVes": { "type": "number" },
+        "category": { "type": "string" },
+        "condition": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "sold", "deleted"] },
+        "views": { "type": "number" }
+      },
+      "required": ["userId", "title", "priceUsd", "category", "status"]
+    },
+    "chats": {
+      "title": "Chat Conversation",
+      "description": "Private messages between buyer and seller",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "listingId": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "listingId"]
+    },
+    "transactions": {
+      "title": "Transaction Record",
+      "description": "Records of purchases and payments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "status": { "type": "string" },
+        "priceUsd": { "type": "number" },
+        "paymentReference": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["listingId", "buyerId", "sellerId", "status", "priceUsd"]
+    },
+    "safePlaces": {
+      "title": "Safe Meeting Place",
+      "description": "Verified locations for safe exchanges",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "address": { "type": "string" },
+        "coords": { "type": "object" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "type", "address", "coords"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profiles"
+    },
+    "/listings/{listingId}": {
+      "schema": "listings",
+      "description": "Marketplace items"
+    },
+    "/listings/{listingId}/viewCounters/{counterId}": {
+      "schema": { "type": "object", "properties": { "count": { "type": "integer" }, "timestamp": { "type": "string" } } },
+      "description": "Shards for distributed view counter"
+    },
+    "/chats/{chatId}": {
+      "schema": "chats",
+      "description": "Chat sessions"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "type": "object", "properties": { "senderId": { "type": "string" }, "text": { "type": "string" }, "createdAt": { "type": "string" } } },
+      "description": "Individual chat messages"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "transactions",
+      "description": "Transaction history"
+    },
+    "/safePlaces/{placeId}": {
+      "schema": "safePlaces",
+      "description": "Safe meeting locations"
+    }
+  }
+}

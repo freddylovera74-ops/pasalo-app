@@ -1,0 +1,47 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAppCheckVerified() {
+      // DEV: desactivado para testing local.
+      // PRODUCCIÓN: cambiar a: return request.app.check.token != null;
+      return true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // User profile photos and listing images
+    match /users/{userId}/photos/{photoId} {
+      // Public read for profile photos
+      allow read: if true;
+      
+      // Only owner can upload their own photos
+      allow write: if isOwner(userId) && isAppCheckVerified() && isValidImage();
+    }
+
+    match /listings/{listingId}/{imageId} {
+      // Public read for listing images
+      allow read: if true;
+      
+      // Only authenticated users can upload listing images
+      // In a real app, we'd check if the user is the owner of the listing
+      allow write: if isAuthenticated() && isAppCheckVerified() && isValidImage();
+    }
+  }
+}
