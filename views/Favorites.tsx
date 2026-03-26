@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Heart, Ghost, Loader2 } from 'lucide-react';
+import { ChevronLeft, Heart, Loader2 } from 'lucide-react';
 import ListingCard from '../components/ListingCard';
 import { useFavorites } from '../hooks/useFavorites';
 import { firestoreService } from '../services/firestoreService';

@@ -4,10 +4,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  signInWithPhoneNumber,
   signInAnonymously,
-  RecaptchaVerifier,
-  ConfirmationResult,
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -21,7 +18,6 @@ interface AuthContextType {
   loading: boolean;
   isAuthReady: boolean;
   login: () => Promise<void>;
-  loginWithPhone: (phone: string, recaptchaContainer: string) => Promise<ConfirmationResult>;
   loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -119,16 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInAnonymously(auth);
   };
 
-  const loginWithPhone = async (
-    phone: string,
-    recaptchaContainerId: string
-  ): Promise<ConfirmationResult> => {
-    const verifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
-      size: 'invisible',
-    });
-    return signInWithPhoneNumber(auth, phone, verifier);
-  };
-
   const logout = async () => {
     await signOut(auth);
   };
@@ -136,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{
       user, firebaseUser, loading, isAuthReady,
-      login, loginWithPhone, loginAsGuest, logout
+      login, loginAsGuest, logout
     }}>
       {children}
     </AuthContext.Provider>

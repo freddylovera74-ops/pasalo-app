@@ -185,7 +185,7 @@ service cloud.firestore {
 
     // Listings collection
     match /listings/{listingId} {
-      allow read: if isAuthenticated(); // Anyone logged in can browse
+      allow read: if true; // Catálogo público: invitados pueden ver listings
       
       allow create: if isAuthenticated() && isAppCheckVerified() && isValidListing(request.resource.data);
       
@@ -202,7 +202,7 @@ service cloud.firestore {
 
       // View Counters subcollection for distributed counter
       match /viewCounters/{counterId} {
-        allow create: if isAuthenticated() && isAppCheckVerified();
+        allow create: if true; // Invitados también generan vistas
         allow read, update, delete: if false;
       }
     }

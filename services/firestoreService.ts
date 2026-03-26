@@ -179,7 +179,9 @@ export const firestoreService = {
       if (docSnap.exists()) return docSnap.data() as User;
       return null;
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${id}`);
+      // Retornar null en lugar de relanzar: el perfil es opcional
+      // (puede fallar por permisos si el lector no está autenticado)
+      console.warn('getUserProfile failed silently:', error instanceof Error ? error.message : error);
       return null;
     }
   },
@@ -248,6 +250,20 @@ export const firestoreService = {
     return onSnapshot(q, async (snap) => {
       const txs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
       callback(txs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'transactions');
+    });
+  },
+
+  getSellerTransactions: (userId: string, callback: (txs: Transaction[]) => void) => {
+    const ref = collection(db, 'transactions');
+    const q = query(
+      ref,
+      where('sellerId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[]);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transactions');
     });

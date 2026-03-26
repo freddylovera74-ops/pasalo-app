@@ -7,11 +7,10 @@ import {
   Package, 
   Edit3, 
   Trash2, 
-  Eye, 
+  Eye,
   TrendingDown,
   Plus,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 import { Listing, User } from '../types';
 import { firestoreService } from '../services/firestoreService';
@@ -43,7 +42,7 @@ const MyListings: React.FC<Props> = ({ user }) => {
       try {
         await firestoreService.updateListing(id, { status: 'deleted' });
         toast.success('Artículo eliminado correctamente');
-      } catch (error) {
+      } catch {
         toast.error('Error al eliminar el artículo');
       }
     }

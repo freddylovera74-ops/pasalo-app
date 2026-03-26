@@ -101,8 +101,13 @@ const TransactionFlow: React.FC<Props> = ({ user }) => {
   };
 
   const handleReportPayment = async () => {
-    if (!screenshotFile && refInput.trim().length < 4) {
-      setError('Debes adjuntar el capture o ingresar los últimos 4 dígitos de la referencia.');
+    const hasRef = refInput.trim().length >= 4;
+    const hasScreenshot = !!screenshotFile;
+
+    if (!hasRef && !hasScreenshot) {
+      const msg = 'Adjunta el capture del pago o ingresa los últimos 4 dígitos de la referencia.';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setError(null);
@@ -270,7 +275,12 @@ const TransactionFlow: React.FC<Props> = ({ user }) => {
                   </button>
                 )}
 
-                {error && <p className="text-[9px] font-black text-brand-accent uppercase text-center">{error}</p>}
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
+                    <i className="fa-solid fa-triangle-exclamation text-red-500 text-xs shrink-0" />
+                    <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase leading-tight">{error}</p>
+                  </div>
+                )}
 
                 <button
                   onClick={handleReportPayment}

@@ -100,6 +100,7 @@ const CreateListing: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { toast.error('Debes iniciar sesión'); return; }
+    if (!formData.title.trim()) { toast.error('El título es obligatorio'); return; }
     if (compressedImages.length === 0) { toast.error('Añade al menos una foto'); return; }
 
     setLoading(true);
@@ -139,7 +140,7 @@ const CreateListing: React.FC = () => {
       await firestoreService.updateListing(listingId, { images: imageUrls });
 
       toast.success('¡Anuncio publicado con éxito!');
-      navigate('/');
+      navigate(`/listing/${listingId}`, { replace: true });
     } catch (error) {
       console.error('Error creating listing:', error);
       toast.error('Error al publicar el anuncio');
@@ -237,9 +238,18 @@ const CreateListing: React.FC = () => {
         {/* Campos principales */}
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Título del artículo</label>
+            <div className="flex justify-between items-center ml-1 mb-1">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Título del artículo</label>
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-widest",
+                formData.title.length >= 72 ? 'text-brand-accent' : formData.title.length >= 55 ? 'text-brand-secondary' : 'text-gray-300'
+              )}>
+                {formData.title.length}/80
+              </span>
+            </div>
             <input
               required
+              maxLength={80}
               className="w-full h-14 px-5 bg-white dark:bg-gray-900 border-none rounded-2xl shadow-sm text-sm font-bold focus:ring-2 focus:ring-brand-primary dark:text-white transition-all"
               placeholder={formData.isBundle ? 'Ej: Lote de Ropa Bebé 0-6m' : '¿Qué vendes?'}
               value={formData.title}

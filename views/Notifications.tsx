@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Bell, Tag, ShieldCheck, MessageCircle, Loader2, Ghost } from 'lucide-react';
+import { ChevronLeft, Bell, Tag, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { firestoreService } from '../services/firestoreService';
 import { cn } from '../lib/utils';
 
 const Notifications: React.FC = () => {

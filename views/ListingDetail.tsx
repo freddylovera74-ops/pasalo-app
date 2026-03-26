@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   ChevronLeft,
   Heart,
@@ -10,12 +10,11 @@ import {
   ShieldCheck,
   TriangleAlert,
   MessageCircle,
-  Zap,
   CheckCircle2,
-  MapPin,
   Loader2,
   Star,
-  ShoppingBag
+  ShoppingBag,
+  Zap
 } from 'lucide-react';
 import { SAFE_PLACES } from '../constants';
 import { SafePlace, Listing, User } from '../types';
@@ -28,7 +27,9 @@ import { toast } from 'sonner';
 const ListingDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
+  // Invitado = no autenticado O usuario anónimo (loginAsGuest)
+  const isGuest = !user || firebaseUser?.isAnonymous === true;
   const [listing, setListing] = useState<Listing | null>(null);
   const [seller, setSeller] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,12 @@ const ListingDetail: React.FC = () => {
             setListing(data);
             setViewCount(data.views);
             firestoreService.incrementListingViews(id);
-            firestoreService.getUserProfile(data.userId).then(s => setSeller(s));
+            // Solo fetchear perfil completo si el usuario está autenticado
+            // (regla Firestore require isAuthenticated). Para invitados se usa
+            // la info denormalizada (sellerName, sellerPhotoURL) del listing.
+            if (!firebaseUser?.isAnonymous && firebaseUser) {
+              firestoreService.getUserProfile(data.userId).then(s => setSeller(s));
+            }
           } else {
             toast.error("Producto no encontrado");
           }
@@ -63,7 +69,7 @@ const ListingDetail: React.FC = () => {
   }, [id]);
 
   const handleContactSeller = async () => {
-    if (!user) {
+    if (isGuest) {
       toast.error("Debes iniciar sesión para contactar al vendedor");
       navigate('/login');
       return;
@@ -120,8 +126,13 @@ const ListingDetail: React.FC = () => {
   };
 
   const handleBuy = async () => {
-    if (!user || !listing) return;
-    if (user.uid === listing.userId) {
+    if (!listing) return;
+    if (isGuest) {
+      toast.error("Debes iniciar sesión para realizar una compra");
+      navigate('/login');
+      return;
+    }
+    if (user!.uid === listing.userId) {
       toast.error("No puedes comprar tu propio artículo");
       return;
     }
@@ -129,15 +140,18 @@ const ListingDetail: React.FC = () => {
     try {
       const txId = await firestoreService.createTransaction({
         listingId: listing.id,
-        buyerId: user.uid,
+        buyerId: user!.uid,
         sellerId: listing.userId,
         status: 'PENDING_PAYMENT',
         priceUsd: listing.priceUsd,
       });
       navigate(`/transaction/${txId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating transaction:", error);
-      toast.error("Error al iniciar la compra. Intenta de nuevo.");
+      const msg = error?.code === 'permission-denied'
+        ? "Sin permisos. Asegúrate de haber iniciado sesión correctamente."
+        : "Error al iniciar la compra. Intenta de nuevo.";
+      toast.error(msg);
     } finally {
       setBuying(false);
     }
@@ -181,7 +195,7 @@ const ListingDetail: React.FC = () => {
         text: listing.description,
         url: window.location.href,
       });
-    } catch (err) {
+    } catch {
       toast.info("Copiado al portapapeles");
       navigator.clipboard.writeText(window.location.href);
     }
@@ -193,38 +207,46 @@ const ListingDetail: React.FC = () => {
       animate={{ opacity: 1 }}
       className="bg-white dark:bg-brand-dark min-h-screen transition-colors pb-32"
     >
-      {/* Floating Header */}
-      <div className="fixed top-0 left-0 right-0 safe-pt p-6 flex justify-between items-center z-50 pointer-events-none">
-        <motion.button 
-          whileHover={{ scale: 1.05 }}
+      {/* Sticky Pasalo Header */}
+      <header className="sticky top-0 z-50 bg-brand-primary px-5 pt-safe-top pb-4 flex items-center justify-between shadow-lg">
+        <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate(-1)} 
-          className="pointer-events-auto bg-white/90 dark:bg-brand-dark/90 backdrop-blur-xl shadow-2xl w-12 h-12 rounded-2xl flex items-center justify-center dark:text-white transition-transform border border-black/5 dark:border-white/10"
+          onClick={() => navigate(-1)}
+          className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-transform"
         >
           <ChevronLeft className="w-6 h-6" />
         </motion.button>
-        <div className="flex gap-3 pointer-events-auto">
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
+
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <div className="w-8 h-8 bg-brand-secondary rounded-xl flex items-center justify-center shadow-md transform rotate-12">
+            <Zap className="text-brand-dark w-4 h-4" />
+          </div>
+          <span className="text-lg font-black text-white italic tracking-tighter uppercase leading-none">Pasalo</span>
+        </button>
+
+        <div className="flex gap-2">
+          <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => toggleFavorite(listing.id)}
             className={cn(
-              "shadow-2xl w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-black/5 dark:border-white/10",
-              favorite ? 'bg-brand-accent text-white' : 'bg-white/90 dark:bg-brand-dark/90 text-gray-400 backdrop-blur-xl'
+              "w-10 h-10 rounded-2xl flex items-center justify-center transition-all",
+              favorite ? 'bg-brand-accent text-white shadow-lg' : 'bg-white/15 text-white'
             )}
           >
-            <Heart className={cn("w-5 h-5", favorite && "fill-current")} />
+            <Heart className={cn("w-4 h-4", favorite && "fill-current")} />
           </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
+          <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleShare}
-            className="bg-white/90 dark:bg-brand-dark/90 backdrop-blur-xl shadow-2xl w-12 h-12 rounded-2xl flex items-center justify-center dark:text-white transition-transform border border-black/5 dark:border-white/10"
+            className="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-transform"
           >
-            <Share2 className="w-5 h-5" />
+            <Share2 className="w-4 h-4" />
           </motion.button>
         </div>
-      </div>
+      </header>
 
       <div className="w-full aspect-square bg-brand-muted dark:bg-brand-dark/80 overflow-hidden relative">
         <motion.img 
@@ -283,8 +305,8 @@ const ListingDetail: React.FC = () => {
            </p>
         </motion.div>
 
-        {/* Vendedor */}
-        {(seller || listing.sellerName) && (
+        {/* Vendedor — siempre visible: usa perfil completo si autenticado, o datos denormalizados/fallback para invitados */}
+        {(seller || listing.sellerName || listing.userId) && (
           <div className="flex items-center gap-4 mb-8 p-4 bg-brand-muted dark:bg-white/5 rounded-3xl border border-black/5 dark:border-white/5">
             <img
               src={seller?.photoURL || listing.sellerPhotoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${listing.userId}`}
@@ -391,8 +413,13 @@ const ListingDetail: React.FC = () => {
           disabled={buying || contacting || listing?.userId === user?.uid}
           className="flex-2 h-14 bg-brand-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-brand-primary/40 transition-all border-b-4 border-black/20 flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {buying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
-          Comprar
+          {buying ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : isGuest ? (
+            <span className="flex items-center gap-2"><ShoppingBag className="w-4 h-4" />Iniciar sesión</span>
+          ) : (
+            <span className="flex items-center gap-2"><ShoppingBag className="w-4 h-4" />Comprar</span>
+          )}
         </motion.button>
       </div>
     </motion.div>

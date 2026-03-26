@@ -40,7 +40,7 @@ export const getLiveActivityFeed = async (location: string): Promise<string[]> =
     const fn = httpsCallable<{ location: string }, string[]>(functions, 'geminiLiveActivity');
     const res = await fn({ location });
     return Array.isArray(res.data) ? res.data : [];
-  } catch (error) {
+  } catch {
     return ['Alguien acaba de negociar un artículo', 'Nueva venta en tu zona', 'Tendencia en Electrónica'];
   }
 };
@@ -50,7 +50,7 @@ export const getSellerAIInsights = async (stats: { views: number; avgTime: numbe
     const fn = httpsCallable<typeof stats, { result: string }>(functions, 'geminiSellerInsights');
     const res = await fn(stats);
     return res.data.result || '¡Tus artículos están destacando!';
-  } catch (error) {
+  } catch {
     return '¡Tus artículos están destacando. Sigue publicando!';
   }
 };

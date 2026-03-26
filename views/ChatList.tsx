@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, ChevronRight, Search, Edit2 } from 'lucide-react';
+import { MessageSquare, ChevronRight, Edit2 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import { User, Chat } from '../types';
 import { firestoreService } from '../services/firestoreService';

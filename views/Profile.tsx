@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
-  User as UserIcon,
   Star,
   Wand2,
   ChevronRight,
@@ -20,8 +19,9 @@ import {
   Send,
   ShieldAlert
 } from 'lucide-react';
-import { User } from '../types';
+import { User, Listing } from '../types';
 import { getSellerAIInsights } from '../services/geminiService';
+import { firestoreService } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -44,15 +44,33 @@ const Profile: React.FC<Props> = ({ user, darkMode, onToggleDarkMode, lowDataMod
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackType, setFeedbackType] = useState<'bug' | 'suggestion'>('suggestion');
   const [sendingFeedback, setSendingFeedback] = useState(false);
+  const [totalViews, setTotalViews] = useState<number | null>(null);
+  const [completedSales, setCompletedSales] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchInsight = async () => {
-      const stats = { views: 1240, avgTime: 3.2, topCategory: 'Electrónica' };
-      const insight = await getSellerAIInsights(stats);
-      setAiInsight(insight);
-    };
-    fetchInsight();
-  }, []);
+    // Suscribir a listings del vendedor para calcular métricas reales
+    const unsubListings = firestoreService.getUserListings(user.uid, (listings: Listing[]) => {
+      const views = listings.reduce((acc, l) => acc + (l.views ?? 0), 0);
+      setTotalViews(views);
+
+      // Categoría más publicada para el insight IA
+      const catCount: Record<string, number> = {};
+      listings.forEach(l => { catCount[l.category] = (catCount[l.category] ?? 0) + 1; });
+      const topCategory = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'General';
+
+      // Lanzar AI insight con datos reales
+      getSellerAIInsights({ views, avgTime: 0, topCategory })
+        .then(setAiInsight)
+        .catch(() => setAiInsight('Publica más artículos para ver tus métricas.'));
+    });
+
+    // Suscribir a ventas completadas
+    const unsubSales = firestoreService.getSellerTransactions(user.uid, (txs) => {
+      setCompletedSales(txs.filter(t => t.status === 'COMPLETED').length);
+    });
+
+    return () => { unsubListings(); unsubSales(); };
+  }, [user.uid]);
 
   const handleSendFeedback = async () => {
     if (!feedbackText.trim()) {
@@ -71,7 +89,7 @@ const Profile: React.FC<Props> = ({ user, darkMode, onToggleDarkMode, lowDataMod
       toast.success('¡Gracias! Tu mensaje fue recibido.');
       setFeedbackText('');
       setShowFeedback(false);
-    } catch (err) {
+    } catch {
       toast.error('Error al enviar. Intenta de nuevo.');
     } finally {
       setSendingFeedback(false);
@@ -152,28 +170,42 @@ const Profile: React.FC<Props> = ({ user, darkMode, onToggleDarkMode, lowDataMod
         </div>
         
         <div className="grid grid-cols-2 gap-3">
-          <motion.div 
+          <motion.div
             whileHover={{ y: -2 }}
             className="bg-white dark:bg-gray-900 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800"
           >
             <div className="flex items-center gap-2 mb-2 text-brand-primary">
               <Eye className="w-4 h-4" />
-              <span className="text-[9px] font-black uppercase tracking-tighter">Alcance</span>
+              <span className="text-[9px] font-black uppercase tracking-tighter">Vistas Totales</span>
             </div>
-            <p className="text-2xl font-black text-gray-900 dark:text-white">1,240</p>
-            <span className="text-[8px] font-bold text-green-500">+12% vs mes pasado</span>
+            {totalViews === null ? (
+              <div className="w-12 h-6 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-black text-gray-900 dark:text-white">
+                {totalViews > 0 ? totalViews.toLocaleString('es-VE') : '0'}
+              </p>
+            )}
+            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+              {totalViews === 0 ? 'Publica para ganar alcance' : 'en todos tus anuncios'}
+            </span>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             whileHover={{ y: -2 }}
             className="bg-white dark:bg-gray-900 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800"
           >
             <div className="flex items-center gap-2 mb-2 text-green-600">
               <Clock className="w-4 h-4" />
-              <span className="text-[9px] font-black uppercase tracking-tighter">Venta Prom.</span>
+              <span className="text-[9px] font-black uppercase tracking-tighter">Ventas Cerradas</span>
             </div>
-            <p className="text-2xl font-black text-gray-900 dark:text-white">3.2 <span className="text-xs font-medium">días</span></p>
-            <span className="text-[8px] font-bold text-blue-500 italic">¡Eres un crack!</span>
+            {completedSales === null ? (
+              <div className="w-8 h-6 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-black text-gray-900 dark:text-white">{completedSales}</p>
+            )}
+            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+              {completedSales === 0 ? 'Sin ventas aún' : 'transacciones completadas'}
+            </span>
           </motion.div>
         </div>
       </div>

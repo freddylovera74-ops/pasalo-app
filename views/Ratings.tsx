@@ -1,13 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { Star, ChevronLeft, MessageSquare, Package, User as UserIcon, Loader2, Send } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Star, ChevronLeft, Package, Loader2, Send } from 'lucide-react';
 import { User, Rating } from '../types';
 import { firestoreService } from '../services/firestoreService';
-import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
-import { toast } from 'sonner';
 
 interface Props {
   user: User;
@@ -16,7 +14,6 @@ interface Props {
 const Ratings: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [receivedRatings, setReceivedRatings] = useState<Rating[]>([]);
-  const [givenRatings, setGivenRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'received' | 'given'>('received');
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Bell, Sparkles, Ghost, ChevronLeft, ChevronRight, Zap, Crosshair, LayoutGrid, Map, Loader2, TrendingUp, Flame } from 'lucide-react';
+import { MapPin, Sparkles, Ghost, ChevronLeft, ChevronRight, Zap, Crosshair, LayoutGrid, Map, Loader2, TrendingUp, Flame } from 'lucide-react';
 import SearchBar from '../components/SearchBar';
 import ListingCard from '../components/ListingCard';
 import NotificationBell from '../components/NotificationBell';
@@ -99,10 +99,13 @@ const Home: React.FC<Props> = ({ lowDataMode }) => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const forYouRef = useRef<HTMLDivElement>(null);
+  const trendingRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRightForYou, setCanScrollRightForYou] = useState(true);
   const [canScrollLeftForYou, setCanScrollLeftForYou] = useState(false);
+  const [canScrollRightTrending, setCanScrollRightTrending] = useState(true);
+  const [canScrollLeftTrending, setCanScrollLeftTrending] = useState(false);
   
   useEffect(() => {
     setLoading(true);
@@ -251,6 +254,22 @@ const Home: React.FC<Props> = ({ lowDataMode }) => {
 
   const scrollRightForYouAction = () => {
     if (forYouRef.current) forYouRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
+  const handleScrollTrending = () => {
+    if (trendingRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = trendingRef.current;
+      setCanScrollLeftTrending(scrollLeft > 10);
+      setCanScrollRightTrending(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  const scrollLeftTrendingAction = () => {
+    if (trendingRef.current) trendingRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+  };
+
+  const scrollRightTrendingAction = () => {
+    if (trendingRef.current) trendingRef.current.scrollBy({ left: 200, behavior: 'smooth' });
   };
 
   return (
@@ -447,11 +466,39 @@ const Home: React.FC<Props> = ({ lowDataMode }) => {
 
         {!selectedCategory && !searchTerm && trendingListings.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4 ml-2">
-              <TrendingUp className="text-brand-accent w-4 h-4" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">Lo más buscado</h3>
+            <div className="flex items-center justify-between mb-4 ml-2 pr-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="text-brand-accent w-4 h-4" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">Lo más buscado</h3>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={scrollLeftTrendingAction}
+                  disabled={!canScrollLeftTrending}
+                  className={cn(
+                    "w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-md flex items-center justify-center text-brand-primary transition-all disabled:opacity-0",
+                    !canScrollLeftTrending && "pointer-events-none"
+                  )}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={scrollRightTrendingAction}
+                  disabled={!canScrollRightTrending}
+                  className={cn(
+                    "w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-md flex items-center justify-center text-brand-primary transition-all disabled:opacity-0",
+                    !canScrollRightTrending && "pointer-events-none"
+                  )}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
+            <div
+              ref={trendingRef}
+              onScroll={handleScrollTrending}
+              className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2 scroll-smooth"
+            >
               {trendingListings.map(item => (
                 <button
                   key={item.id}

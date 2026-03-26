@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 type TransactionStatus = 'pending' | 'completed' | 'cancelled' | 'shipped' | 'PAYMENT_REPORTED' | 'PAYMENT_VERIFIED';

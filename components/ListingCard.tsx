@@ -92,7 +92,13 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, lowData }) => {
         style={{ minHeight: '280px' }}
       >
         <div className="relative aspect-[3/4] overflow-hidden">
-          <ProgressiveImage src={listing.images[0]} alt={listing.title} lowData={lowData} />
+          {listing.images && listing.images.length > 0 ? (
+            <ProgressiveImage src={listing.images[0]} alt={listing.title} lowData={lowData} />
+          ) : (
+            <div className="w-full h-full bg-gray-100 dark:bg-brand-dark/50 flex items-center justify-center">
+              <Zap className="w-10 h-10 text-gray-300 dark:text-gray-700" />
+            </div>
+          )}
           
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-20">
             <span className="bg-brand-dark/60 backdrop-blur-md text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest w-fit">

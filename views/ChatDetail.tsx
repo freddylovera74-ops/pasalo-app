@@ -29,7 +29,6 @@ const ChatDetail: React.FC<Props> = ({ user }) => {
   const [msg, setMsg] = useState('');
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -44,7 +43,6 @@ const ChatDetail: React.FC<Props> = ({ user }) => {
 
     const unsubscribe = firestoreService.getMessages(id, (fetchedMessages) => {
       setMessages(fetchedMessages);
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -147,7 +145,7 @@ const ChatDetail: React.FC<Props> = ({ user }) => {
         className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar pb-32 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat opacity-90 dark:opacity-40"
       >
         <AnimatePresence mode="popLayout">
-          {messages.map((m, index) => (
+          {messages.map((m) => (
             <motion.div 
               key={m.id} 
               initial={{ opacity: 0, scale: 0.9, y: 10 }}
