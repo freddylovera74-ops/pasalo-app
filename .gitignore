@@ -1,3 +1,9 @@
+# ─── Secretos — NUNCA subir a git ────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+firebase-applet-config.json
+
 # Logs
 logs
 *.log
