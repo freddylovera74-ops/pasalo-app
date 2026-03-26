@@ -104,6 +104,9 @@ const CreateListing: React.FC = () => {
     if (compressedImages.length === 0) { toast.error('Añade al menos una foto'); return; }
 
     setLoading(true);
+    // Guardamos el id fuera del try para poder limpiar si falla el upload
+    let listingId: string | null = null;
+
     try {
       const priceUsd = parseFloat(formData.priceUsd);
       const selectedCity = VENEZUELAN_CITIES.find(c => c.name === formData.city) || VENEZUELAN_CITIES[0];
@@ -130,20 +133,30 @@ const CreateListing: React.FC = () => {
           address: `${selectedCity.name}, Venezuela`
         }
       };
-      const listingId = await firestoreService.createListing(tempListing);
-      if (!listingId) throw new Error('No se pudo crear el anuncio');
+      listingId = await firestoreService.createListing(tempListing) ?? null;
+      if (!listingId) throw new Error('No se pudo crear el anuncio en Firestore');
 
       // 2. Subir imágenes a Firebase Storage con el listingId real
       const imageUrls = await uploadListingImages(compressedImages, listingId);
+      if (imageUrls.length === 0) throw new Error('No se pudo subir ninguna imagen');
 
       // 3. Actualizar el documento con las URLs reales
       await firestoreService.updateListing(listingId, { images: imageUrls });
 
       toast.success('¡Anuncio publicado con éxito!');
       navigate(`/listing/${listingId}`, { replace: true });
-    } catch (error) {
-      console.error('Error creating listing:', error);
-      toast.error('Error al publicar el anuncio');
+    } catch (error: any) {
+      console.error('Error publishing listing:', error?.message ?? error);
+
+      // Limpiar el documento fantasma si falló después del paso 1
+      if (listingId) {
+        firestoreService.updateListing(listingId, { status: 'deleted' }).catch(() => {});
+      }
+
+      const msg = error?.message?.includes('imagen')
+        ? 'Error al subir las fotos. Revisa tu conexión y el tamaño de las imágenes.'
+        : 'Error al publicar el anuncio. Intenta de nuevo.';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

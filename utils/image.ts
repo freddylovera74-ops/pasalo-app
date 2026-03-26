@@ -10,22 +10,44 @@ export const uploadImageToStorage = async (
   path: string
 ): Promise<string> => {
   const storageRef = ref(storage, path);
-  const snapshot = await uploadString(storageRef, dataUrl, 'data_url');
+  // El contentType explícito es crítico: la regla isValidImage() en storage.rules
+  // evalúa request.resource.contentType — sin metadata Firebase puede no detectarlo.
+  const metadata = { contentType: 'image/jpeg' };
+  const snapshot = await uploadString(storageRef, dataUrl, 'data_url', metadata);
   return await getDownloadURL(snapshot.ref);
 };
 
 /**
  * Sube múltiples imágenes para un listing y devuelve sus URLs públicas.
+ * Usa Promise.allSettled para no cancelar todas si una sola falla.
+ * Lanza error solo si NINGUNA imagen pudo subirse.
  */
 export const uploadListingImages = async (
   dataUrls: string[],
   listingId: string
 ): Promise<string[]> => {
-  const uploads = dataUrls.map((dataUrl, idx) => {
-    const path = `listings/${listingId}/${Date.now()}-${idx}.jpg`;
-    return uploadImageToStorage(dataUrl, path);
+  const results = await Promise.allSettled(
+    dataUrls.map((dataUrl, idx) => {
+      const path = `listings/${listingId}/${Date.now()}-${idx}.jpg`;
+      return uploadImageToStorage(dataUrl, path);
+    })
+  );
+
+  const urls: string[] = [];
+  results.forEach((result, idx) => {
+    if (result.status === 'fulfilled') {
+      urls.push(result.value);
+    } else {
+      console.warn(`uploadListingImages: imagen ${idx} falló —`, result.reason?.message ?? result.reason);
+    }
   });
-  return Promise.all(uploads);
+
+  // Si no subió ni una imagen, es un error fatal
+  if (urls.length === 0) {
+    throw new Error('No se pudo subir ninguna imagen. Revisa tu conexión y que cada foto sea menor a 5 MB.');
+  }
+
+  return urls;
 };
 
 /**

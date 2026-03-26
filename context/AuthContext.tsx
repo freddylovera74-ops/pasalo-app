@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -107,12 +108,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      // 'auth/popup-closed-by-user' es cancelación voluntaria — no mostrar error
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        console.error('Auth Error:', error?.code, error?.message);
+        toast.error('Error al iniciar sesión. Verifica tu conexión o intenta de nuevo.');
+      }
+      throw error;
+    }
   };
 
   const loginAsGuest = async () => {
-    await signInAnonymously(auth);
+    try {
+      await signInAnonymously(auth);
+    } catch (error: any) {
+      console.error('Auth Error (guest):', error?.code, error?.message);
+      toast.error('No se pudo entrar como invitado. Intenta de nuevo.');
+      throw error;
+    }
   };
 
   const logout = async () => {
