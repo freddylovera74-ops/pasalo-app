@@ -16,6 +16,40 @@ function getAI() {
   return new GoogleGenAI({ apiKey });
 }
 
+// Envuelve generateContent con reintentos (hasta 2) para errores transitorios
+// y valida que el contenido no sea vacío. Previene "Expecting value" en JSON.parse
+// cuando el modelo devuelve string vacío por finish_reason=length/safety/recitation.
+async function callAIWithRetry(
+  ai: GoogleGenAI,
+  params: Parameters<GoogleGenAI["models"]["generateContent"]>[0],
+  maxRetries = 2
+): ReturnType<GoogleGenAI["models"]["generateContent"]> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent(params);
+      const text = response.text?.trim();
+      const finishReason = (response.candidates?.[0] as { finishReason?: string } | undefined)?.finishReason;
+      // Si el modelo cortó por length/safety, no vale la pena reintentar con el mismo prompt
+      if (!text && finishReason && finishReason !== "STOP") {
+        throw new Error(`AI_NO_CONTENT:${finishReason}`);
+      }
+      if (!text && attempt < maxRetries) continue;
+      return response;
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("AI_NO_CONTENT:SAFETY") || msg.includes("invalid-argument")) throw err;
+      if (attempt < maxRetries) {
+        const delay = 1000 * (attempt + 1);
+        console.warn(`[AI] Retry ${attempt + 1}/${maxRetries} after ${delay}ms: ${msg.slice(0, 120)}`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // ─── HTTPS Callable: mejorar descripción de anuncio ─────────────────────────
 export const geminiEnhanceDescription = onCall(
   { secrets: ["GEMINI_API_KEY"], cors: true },
@@ -25,14 +59,15 @@ export const geminiEnhanceDescription = onCall(
     if (!title || !description) throw new HttpsError("invalid-argument", "Faltan title y description.");
 
     const ai = getAI();
-    const response = await ai.models.generateContent({
+    const response = await callAIWithRetry(ai, {
       model: "gemini-2.0-flash",
-      contents: `Optimiza esta descripción para una plataforma de venta de artículos usados en Venezuela.
+      contents: `Optimiza esta descripción para venta de artículos usados en Venezuela.
 Producto: ${title}
-Descripción original: ${description}
-Hazla atractiva, clara y resalta posibles beneficios. Usa un tono amigable. Máximo 300 palabras.`,
+Descripción original: ${(description || "").slice(0, 1200)}
+Hazla atractiva y clara. Tono amigable. Máximo 100 palabras. Solo responde con el texto final.`,
     });
-    return { result: response.text?.trim() || description };
+    const raw = response.text?.trim();
+    return { result: raw || description };
   }
 );
 
@@ -45,7 +80,7 @@ export const geminiSuggestPrice = onCall(
     if (!title || !category) throw new HttpsError("invalid-argument", "Faltan title y category.");
 
     const ai = getAI();
-    const response = await ai.models.generateContent({
+    const response = await callAIWithRetry(ai, {
       model: "gemini-2.0-flash",
       contents: `Sugiere un rango de precio en USD para un artículo de segunda mano en Venezuela.
 Título: ${title}
@@ -64,8 +99,13 @@ Devuelve solo un objeto JSON con "min", "max" y "average".`,
         },
       },
     });
-    const text = response.text?.trim() || "{}";
-    return JSON.parse(text);
+    const text = response.text?.trim();
+    if (!text) throw new HttpsError("internal", "La IA no pudo sugerir un precio. Intenta de nuevo.");
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new HttpsError("internal", "La IA devolvió un formato inválido. Intenta de nuevo.");
+    }
   }
 );
 
@@ -77,18 +117,23 @@ export const geminiLiveActivity = onCall(
     const { location } = request.data as { location: string };
 
     const ai = getAI();
-    const response = await ai.models.generateContent({
+    const response = await callAIWithRetry(ai, {
       model: "gemini-2.0-flash",
       contents: `Genera 5 mensajes cortos de actividad para una app de ventas en vivo en ${location || "Venezuela"}.
-Ejemplos: "Nuevo iPhone en Chacao", "Oferta aceptada en Las Mercedes", "5 personas viendo Ropa".
+Ejemplos: "Nuevo iPhone en Chacao", "Oferta aceptada en Las Mercedes".
 Sé creativo y breve. Devuelve un array JSON de strings.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } },
       },
     });
-    const text = response.text?.trim() || "[]";
-    return JSON.parse(text);
+    const text = response.text?.trim();
+    if (!text) return ["Alguien acaba de negociar un artículo", "Nueva venta en tu zona", "Tendencia en Electrónica"];
+    try {
+      return JSON.parse(text);
+    } catch {
+      return ["Alguien acaba de negociar un artículo", "Nueva venta en tu zona", "Tendencia en Electrónica"];
+    }
   }
 );
 
@@ -102,13 +147,13 @@ export const geminiSellerInsights = onCall(
     };
 
     const ai = getAI();
-    const response = await ai.models.generateContent({
+    const response = await callAIWithRetry(ai, {
       model: "gemini-2.0-flash",
-      contents: `Analiza estas métricas de un vendedor en PASALO.app y dale un consejo estratégico corto:
+      contents: `Analiza estas métricas de un vendedor en PASALO.app y dale un consejo estratégico:
 Vistas: ${views}, Tiempo promedio de venta: ${avgTime} días, Categoría más vendida: ${topCategory}.
-El tono debe ser de un mentor de negocios experto y motivador. Máximo 100 caracteres.`,
+Tono de mentor experto y motivador. Máximo 80 caracteres. Solo responde con el consejo.`,
     });
-    return { result: response.text?.trim() || "¡Sigue publicando, tus artículos están destacando!" };
+    return { result: response.text?.trim() || "¡Tus artículos están destacando. Sigue publicando!" };
   }
 );
 
